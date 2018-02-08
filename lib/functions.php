@@ -4,7 +4,7 @@
  * @param string $path 目录
  * @param int $mode 访问权
  */
-function mkpath ($path, $mode = 0777)
+function mkpath($path, $mode = 0777)
 {
     $dirs = preg_split('/[\/\]/', $path);
     $path = $dirs[0];
@@ -12,7 +12,40 @@ function mkpath ($path, $mode = 0777)
         $path .= '/' . $dirs[$i];
         @mkdir($path, $mode);
     }
-    mkdir();
+}
+
+/**
+ * 有安全模式限制，可用ftp方式
+ * @param $path
+ * @param int $mode
+ * @param array $ftp ['host' => 'localhost', 'port' => 21, 'timeout' => 90, 'ftp_user' => '', 'ftp_pass' => '']
+ * @return bool|string
+ */
+function mkDirFix($path, $mode = 0777, $ftp = array('host' => 'localhost', 'port' => 21, 'timeout' => 90, 'ftp_user' => '', 'ftp_pass' => ''))
+{
+    $currPath = '';
+    $path = explode('/', $path);
+    $conn_id = @ftp_connect($ftp['localhost'], $ftp['port'], $ftp['timeout']);
+    if (!$conn_id) {
+        return false;
+    }
+    if (@ftp_login($ftp['ftp_user'], $ftp['ftp_pass'])) {
+        foreach ($path as $dir) {
+            if (!$dir) {
+                return false;
+            }
+            $currPath .= '/' . trim($dir);
+            if (!@ftp_chdir($conn_id, $currPath)) {
+                if (!@ftp_mkdir($conn_id, $currPath)) {
+                    @ftp_close($conn_id);
+                    return false;
+                }
+                @ftp_chmod($conn_id, $mode, $currPath);
+            }
+        }
+    }
+    @ftp_close($conn_id);
+    return $currPath;
 }
 
 /**
@@ -20,7 +53,7 @@ function mkpath ($path, $mode = 0777)
  * @param string $src 原始路径
  * @param string $new 目标路径
  */
-function copyfiles ($src, $new)
+function copyfiles($src, $new)
 {
     $d = dir($src);
     while (($entry = $d->read())) {
@@ -36,7 +69,8 @@ function copyfiles ($src, $new)
  * @param $str
  * @return int
  */
-function mstrlen($str){
+function mstrlen($str)
+{
     if (empty($str)){
         return 0;
     }elseif (function_exists("mb_strlen")){
@@ -56,7 +90,8 @@ function mstrlen($str){
  * @param bool $suffix 后缀
  * @return string
  */
-function msubstr($str, $start=0, $length, $charset="utf-8", $suffix=true) {
+function msubstr($str, $start=0, $length, $charset="utf-8", $suffix=true)
+{
     if (mstrlen($str) <= $length){
         return $str;
     }
